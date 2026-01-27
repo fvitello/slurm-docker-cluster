@@ -64,8 +64,9 @@ A shared `/data` directory is mounted across all nodes for job files and binarie
 ```bash
 git clone <your-fork-url>
 cd slurm-docker-cluster
+```
 
-### Clone the repository
+### Build the containers
 ```bash
 # Build base Slurm image first
 COMPOSE_BAKE=false docker compose build slurmdbd
@@ -75,6 +76,7 @@ COMPOSE_BAKE=false docker compose build slurmctld c1 c2
 
 # Start the cluster
 docker compose up -d
+```
 
 ### Verifying the Installation
 ```bash
