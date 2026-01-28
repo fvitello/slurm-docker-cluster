@@ -1,5 +1,7 @@
 services:
   slurmctld:
+    volumes:
+      - ~/slurm-data:/data
     image: slurm-docker-cluster-openmpi:${SLURM_VERSION:-25.05.3}
     build:
       context: .
@@ -8,6 +10,8 @@ services:
         SLURM_VERSION: ${SLURM_VERSION:-25.05.3}
 
   c1:
+    volumes:
+      - ~/slurm-data:/data
     image: slurm-docker-cluster-openmpi:${SLURM_VERSION:-25.05.3}
     build:
       context: .
@@ -16,6 +20,8 @@ services:
         SLURM_VERSION: ${SLURM_VERSION:-25.05.3}
 
   c2:
+    volumes:
+      - ~/slurm-data:/data 
     image: slurm-docker-cluster-openmpi:${SLURM_VERSION:-25.05.3}
     build:
       context: .
