@@ -1,0 +1,24 @@
+services:
+  slurmctld:
+    image: slurm-docker-cluster-openmpi:${SLURM_VERSION:-25.05.3}
+    build:
+      context: .
+      dockerfile: Dockerfile.openmpi
+      args:
+        SLURM_VERSION: ${SLURM_VERSION:-25.05.3}
+
+  c1:
+    image: slurm-docker-cluster-openmpi:${SLURM_VERSION:-25.05.3}
+    build:
+      context: .
+      dockerfile: Dockerfile.openmpi
+      args:
+        SLURM_VERSION: ${SLURM_VERSION:-25.05.3}
+
+  c2:
+    image: slurm-docker-cluster-openmpi:${SLURM_VERSION:-25.05.3}
+    build:
+      context: .
+      dockerfile: Dockerfile.openmpi
+      args:
+        SLURM_VERSION: ${SLURM_VERSION:-25.05.3}
