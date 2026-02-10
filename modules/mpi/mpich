@@ -1,0 +1,15 @@
+#%Module1.0
+proc ModulesHelp { } {
+    puts stderr "Loads MPICH from /usr/lib64/mpich."
+}
+module-whatis "MPICH (system package)"
+
+conflict mpi
+
+set root /usr/lib64/mpich
+prepend-path PATH $root/bin
+prepend-path LD_LIBRARY_PATH $root/lib
+prepend-path MANPATH $root/share/man
+
+setenv MPI_HOME $root
+setenv MPI_BIN $root/bin

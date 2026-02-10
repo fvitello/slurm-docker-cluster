@@ -1,0 +1,17 @@
+#%Module1.0
+proc ModulesHelp { } {
+    puts stderr "Loads GCC 12 (gcc-toolset-12)."
+}
+module-whatis "GCC 12 toolchain (gcc-toolset-12)"
+
+conflict gcc
+
+set root /opt/rh/gcc-toolset-12/root
+prepend-path PATH $root/usr/bin
+prepend-path LD_LIBRARY_PATH $root/usr/lib64
+prepend-path MANPATH $root/usr/share/man
+
+setenv CC gcc
+setenv CXX g++
+setenv FC gfortran
+setenv GCC_HOME $root

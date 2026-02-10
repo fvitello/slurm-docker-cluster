@@ -2,7 +2,22 @@ ARG SLURM_VERSION=25.05.3
 
 FROM slurm-docker-cluster:${SLURM_VERSION}
 
-RUN yum -y install openmpi openmpi-devel papi papi-devel gnuplot && yum clean all
+RUN yum -y install \
+      openmpi \
+      openmpi-devel \
+      mpich \
+      mpich-devel \
+      gcc-toolset-12 \
+      gcc-toolset-13 \
+      clang \
+      llvm \
+      environment-modules \
+      papi \
+      papi-devel \
+      gnuplot \
+    && yum clean all
 
 ENV PATH=/usr/lib64/openmpi/bin:$PATH
 ENV LD_LIBRARY_PATH=/usr/lib64/openmpi/lib:$LD_LIBRARY_PATH
+
+COPY modules/ /usr/share/Modules/modulefiles/
