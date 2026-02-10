@@ -62,7 +62,7 @@ A shared `/data` directory is mounted across all nodes for job files and binarie
 
 ### Clone the repository
 ```bash
-git clone <your-fork-url>
+git clone https://github.com/fvitello/slurm-docker-cluster
 cd slurm-docker-cluster
 ```
 
