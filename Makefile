@@ -1,4 +1,4 @@
-.PHONY: help build up start down clean logs test status shell logs-slurmctld logs-slurmdbd update-slurm reload-slurm version set-version build-all test-all test-version
+.PHONY: help build up start down clean logs test status shell shell-root logs-slurmctld logs-slurmdbd update-slurm reload-slurm version set-version build-all test-all test-version
 
 # Default target
 .DEFAULT_GOAL := help
@@ -34,7 +34,8 @@ help:  ## Show this help message
 	@printf "  ${CYAN}%-15s${RESET} %s\n" "reload-slurm" "Reload Slurm config without restart"
 	@echo ""
 	@echo "Development & Testing:"
-	@printf "  ${CYAN}%-15s${RESET} %s\n" "shell" "Open shell in slurmctld"
+	@printf "  ${CYAN}%-15s${RESET} %s\n" "shell" "Open shell in slurmctld as student"
+	@printf "  ${CYAN}%-15s${RESET} %s\n" "shell-root" "Open shell in slurmctld as root"
 	@printf "  ${CYAN}%-15s${RESET} %s\n" "test" "Run test suite"
 	@printf "  ${CYAN}%-15s${RESET} %s\n" "quick-test" "Submit a quick test job"
 	@printf "  ${CYAN}%-15s${RESET} %s\n" "run-examples" "Run example jobs"
@@ -76,7 +77,10 @@ status:  ## Show cluster status
 	@echo "=== Cluster ==="
 	@docker exec slurmctld sinfo 2>/dev/null || echo "Not ready"
 
-shell:  ## Open shell in slurmctld
+shell:  ## Open shell in slurmctld as student
+	docker exec -it -u student slurmctld bash -l
+
+shell-root:  ## Open shell in slurmctld as root
 	docker exec -it slurmctld bash
 
 logs-slurmctld:  ## Show slurmctld logs

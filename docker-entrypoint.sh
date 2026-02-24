@@ -1,6 +1,85 @@
 #!/bin/bash
 set -e
 
+HPC_USER="${HPC_USER:-student}"
+HPC_UID="${HPC_UID:-2000}"
+HPC_GID="${HPC_GID:-2000}"
+HPC_HOME="/home/${HPC_USER}"
+
+ensure_hpc_user() {
+    if ! getent group "${HPC_USER}" >/dev/null 2>&1; then
+        groupadd -g "${HPC_GID}" "${HPC_USER}"
+    fi
+
+    if ! id -u "${HPC_USER}" >/dev/null 2>&1; then
+        useradd -m -u "${HPC_UID}" -g "${HPC_GID}" -s /bin/bash "${HPC_USER}"
+    fi
+
+    mkdir -p "${HPC_HOME}"
+    chown "${HPC_UID}:${HPC_GID}" "${HPC_HOME}" 2>/dev/null || true
+    chmod 700 "${HPC_HOME}" 2>/dev/null || true
+    chmod 755 /home 2>/dev/null || true
+    # Keep account valid for key-based SSH on Rocky/RHEL images.
+    if passwd -S "${HPC_USER}" 2>/dev/null | awk '{print $2}' | grep -q '^L$'; then
+        tmp_pass="$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 24)"
+        echo "${HPC_USER}:${tmp_pass:-hpc-temporary-password}" | chpasswd >/dev/null 2>&1 || true
+    fi
+    passwd -u "${HPC_USER}" >/dev/null 2>&1 || true
+    chage -E -1 -M -1 -I -1 -m 0 "${HPC_USER}" >/dev/null 2>&1 || true
+}
+
+init_hpc_ssh() {
+    local ssh_dir="${HPC_HOME}/.ssh"
+    local key_file="${ssh_dir}/id_ed25519"
+
+    mkdir -p "${ssh_dir}"
+    chmod 700 "${ssh_dir}"
+    chown "${HPC_UID}:${HPC_GID}" "${ssh_dir}" 2>/dev/null || true
+
+    if [ ! -f "${key_file}" ]; then
+        gosu "${HPC_USER}" ssh-keygen -t ed25519 -N "" -f "${key_file}"
+    fi
+
+    # Keep public and authorized keys in sync with the private key in shared HOME.
+    gosu "${HPC_USER}" ssh-keygen -y -f "${key_file}" > "${key_file}.pub"
+    cp -f "${key_file}.pub" "${ssh_dir}/authorized_keys"
+    chmod 600 "${ssh_dir}/authorized_keys"
+    chown "${HPC_UID}:${HPC_GID}" "${key_file}" "${key_file}.pub" "${ssh_dir}/authorized_keys" 2>/dev/null || true
+
+    cat > "${ssh_dir}/config" <<EOF
+Host slurmctld c1 c2
+    User ${HPC_USER}
+    IdentityFile ~/.ssh/id_ed25519
+    IdentitiesOnly yes
+    PubkeyAuthentication yes
+    StrictHostKeyChecking accept-new
+    UserKnownHostsFile ~/.ssh/known_hosts
+EOF
+    chmod 600 "${ssh_dir}/config"
+    chown "${HPC_UID}:${HPC_GID}" "${ssh_dir}/config" 2>/dev/null || true
+
+    : > "${ssh_dir}/known_hosts"
+    for host in slurmctld c1 c2; do
+        ssh-keyscan "${host}" >> "${ssh_dir}/known_hosts" 2>/dev/null || true
+    done
+    chmod 600 "${ssh_dir}/known_hosts" 2>/dev/null || true
+    chown "${HPC_UID}:${HPC_GID}" "${ssh_dir}/known_hosts" 2>/dev/null || true
+    chown -R "${HPC_UID}:${HPC_GID}" "${ssh_dir}" 2>/dev/null || true
+    chmod 700 "${ssh_dir}" 2>/dev/null || true
+    chmod 600 "${ssh_dir}/id_ed25519" "${ssh_dir}/authorized_keys" "${ssh_dir}/config" "${ssh_dir}/known_hosts" 2>/dev/null || true
+    chmod 644 "${ssh_dir}/id_ed25519.pub" 2>/dev/null || true
+}
+
+start_sshd() {
+    if command -v /usr/sbin/sshd >/dev/null 2>&1; then
+        mkdir -p /var/run/sshd
+        mkdir -p /var/log
+        /usr/sbin/sshd -E /var/log/sshd.log
+    fi
+}
+
+ensure_hpc_user
+
 echo "---> Starting the MUNGE Authentication service (munged) ..."
 gosu munge /usr/sbin/munged
 
@@ -28,6 +107,9 @@ fi
 
 if [ "$1" = "slurmctld" ]
 then
+    init_hpc_ssh
+    start_sshd
+
     echo "---> Waiting for slurmdbd to become active before starting slurmctld ..."
 
     until 2>/dev/null >/dev/tcp/slurmdbd/6819
@@ -63,6 +145,9 @@ fi
 
 if [ "$1" = "slurmd" ]
 then
+    init_hpc_ssh
+    start_sshd
+
     echo "---> Waiting for slurmctld to become active before starting slurmd..."
 
     until 2>/dev/null >/dev/tcp/slurmctld/6817

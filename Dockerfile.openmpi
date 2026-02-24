@@ -1,6 +1,13 @@
 ARG SLURM_VERSION=25.05.3
+ARG HPC_USER=student
+ARG HPC_UID=2000
+ARG HPC_GID=2000
 
 FROM slurm-docker-cluster:${SLURM_VERSION}
+
+ARG HPC_USER=student
+ARG HPC_UID=2000
+ARG HPC_GID=2000
 
 RUN yum -y install \
       openmpi \
@@ -12,12 +19,37 @@ RUN yum -y install \
       clang \
       llvm \
       environment-modules \
+      openssh-server \
+      openssh-clients \
       papi \
       papi-devel \
       gnuplot \
     && yum clean all
 
-ENV PATH=/usr/lib64/openmpi/bin:$PATH
-ENV LD_LIBRARY_PATH=/usr/lib64/openmpi/lib:$LD_LIBRARY_PATH
+ENV BASH_ENV=/etc/profile.d/hpc-env.sh
+ENV ENV=/etc/profile.d/hpc-env.sh
+ENV HPC_USER=${HPC_USER}
+ENV HPC_UID=${HPC_UID}
+ENV HPC_GID=${HPC_GID}
 
 COPY modules/ /usr/share/Modules/modulefiles/
+COPY hpc-env.sh /etc/profile.d/hpc-env.sh
+
+RUN chmod 0644 /etc/profile.d/hpc-env.sh \
+    && groupadd -g "${HPC_GID}" "${HPC_USER}" \
+    && useradd -m -u "${HPC_UID}" -g "${HPC_GID}" -s /bin/bash "${HPC_USER}" \
+    && mkdir -p /var/run/sshd \
+    && ssh-keygen -A \
+    && printf '%s\n' \
+       'PubkeyAuthentication yes' \
+       'AuthorizedKeysFile .ssh/authorized_keys' \
+       'PasswordAuthentication no' \
+       'KbdInteractiveAuthentication no' \
+       'ChallengeResponseAuthentication no' \
+       'GSSAPIAuthentication no' \
+       'StrictModes no' \
+       'UsePAM yes' \
+       'LogLevel INFO' \
+       > /etc/ssh/sshd_config.d/10-hpc.conf \
+    && mkdir -p /scratch \
+    && chmod 1777 /scratch
