@@ -38,18 +38,39 @@ COPY hpc-env.sh /etc/profile.d/hpc-env.sh
 RUN chmod 0644 /etc/profile.d/hpc-env.sh \
     && rm -f /etc/profile.d/openmpi* /etc/profile.d/mpich* \
     && rm -f /usr/bin/mpicc /usr/bin/mpic++ /usr/bin/mpicxx /usr/bin/mpifort /usr/bin/mpif90 \
-    && mkdir -p /opt/clang/bin \
-    && for b in /usr/bin/clang /usr/bin/clang++ /usr/bin/clang-[0-9]* /usr/bin/clang++-[0-9]*; do \
-         if [ -x "$b" ]; then mv "$b" /opt/clang/bin/; fi; \
+    && mkdir -p /opt/clang/bin /opt/clang/real \
+    && for b in /usr/bin/clang /usr/bin/clang++ /usr/bin/clang-[0-9]* /usr/bin/clang++-[0-9]* /usr/bin/clang-scan-deps /usr/bin/clang-scan-deps-[0-9]*; do \
+         if [ -x "$b" ]; then cp -L "$b" "/opt/clang/real/$(basename "$b").real"; fi; \
        done \
-    && if [ ! -x /opt/clang/bin/clang ]; then \
-         c=$(ls /opt/clang/bin/clang-[0-9]* 2>/dev/null | head -n1); \
-         if [ -n "$c" ]; then ln -sf "$(basename "$c")" /opt/clang/bin/clang; fi; \
+    && rm -f /usr/bin/clang /usr/bin/clang++ /usr/bin/clang-[0-9]* /usr/bin/clang++-[0-9]* /usr/bin/clang-scan-deps /usr/bin/clang-scan-deps-[0-9]* \
+    && if [ ! -e /opt/clang/real/clang.real ]; then \
+         c=$(ls /opt/clang/real/clang-[0-9]*.real 2>/dev/null | head -n1); \
+         if [ -n "$c" ]; then cp "$c" /opt/clang/real/clang.real; fi; \
        fi \
-    && if [ ! -x /opt/clang/bin/clang++ ]; then \
-         cxx=$(ls /opt/clang/bin/clang++-[0-9]* 2>/dev/null | head -n1); \
-         if [ -n "$cxx" ]; then ln -sf "$(basename "$cxx")" /opt/clang/bin/clang++; fi; \
+    && if [ ! -e /opt/clang/real/clang++.real ]; then \
+         cxx=$(ls /opt/clang/real/clang++-[0-9]*.real 2>/dev/null | head -n1); \
+         if [ -n "$cxx" ]; then cp "$cxx" /opt/clang/real/clang++.real; fi; \
        fi \
+    && printf '%s\n' \
+       '#!/bin/sh' \
+       'tool="$(basename "$0")"' \
+       'real="/opt/clang/real/${tool}.real"' \
+       'if [ ! -x "$real" ]; then' \
+       '  echo "Missing real clang tool: $real" >&2' \
+       '  exit 127' \
+       'fi' \
+       'res="$(ls -d /usr/lib64/clang/[0-9]* /usr/lib/clang/[0-9]* 2>/dev/null | head -n1)"' \
+       'case "$tool" in' \
+       '  clang|clang++|clang-[0-9]*|clang++-[0-9]*)' \
+       '    if [ -n "$res" ]; then exec "$real" -resource-dir "$res" "$@"; else exec "$real" "$@"; fi ;;' \
+       '  *) exec "$real" "$@" ;;' \
+       'esac' \
+       > /opt/clang/bin/clang-wrapper \
+    && chmod 0755 /opt/clang/bin/clang-wrapper \
+    && for r in /opt/clang/real/*.real; do \
+         n=$(basename "$r" .real); \
+         ln -sf clang-wrapper "/opt/clang/bin/$n"; \
+       done \
     && groupadd -g "${HPC_GID}" "${HPC_USER}" \
     && useradd -m -u "${HPC_UID}" -g "${HPC_GID}" -s /bin/bash "${HPC_USER}" \
     && mkdir -p /var/run/sshd \
