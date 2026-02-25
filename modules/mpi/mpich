@@ -13,4 +13,3 @@ prepend-path MANPATH $root/share/man
 
 setenv MPI_HOME $root
 setenv MPI_BIN $root/bin
-setenv HPC_MPI_ACTIVE mpich

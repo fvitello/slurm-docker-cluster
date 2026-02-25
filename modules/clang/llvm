@@ -6,11 +6,9 @@ module-whatis "Clang/LLVM toolchain"
 
 conflict gcc
 
-set root /usr/lib64/llvm
+set root /opt/clang
 prepend-path PATH $root/bin
-prepend-path LD_LIBRARY_PATH $root/lib
 
 setenv CC clang
 setenv CXX clang++
 setenv LLVM_HOME $root
-setenv HPC_CLANG_ACTIVE 1

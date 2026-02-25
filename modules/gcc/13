@@ -15,4 +15,3 @@ setenv CC gcc
 setenv CXX g++
 setenv FC gfortran
 setenv GCC_HOME $root
-setenv HPC_GCC_ACTIVE 1

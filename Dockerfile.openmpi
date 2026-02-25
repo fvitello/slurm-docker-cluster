@@ -36,6 +36,20 @@ COPY modules/ /usr/share/Modules/modulefiles/
 COPY hpc-env.sh /etc/profile.d/hpc-env.sh
 
 RUN chmod 0644 /etc/profile.d/hpc-env.sh \
+    && rm -f /etc/profile.d/openmpi* /etc/profile.d/mpich* \
+    && rm -f /usr/bin/mpicc /usr/bin/mpic++ /usr/bin/mpicxx /usr/bin/mpifort /usr/bin/mpif90 \
+    && mkdir -p /opt/clang/bin \
+    && for b in /usr/bin/clang /usr/bin/clang++ /usr/bin/clang-[0-9]* /usr/bin/clang++-[0-9]*; do \
+         if [ -x "$b" ]; then mv "$b" /opt/clang/bin/; fi; \
+       done \
+    && if [ ! -x /opt/clang/bin/clang ]; then \
+         c=$(ls /opt/clang/bin/clang-[0-9]* 2>/dev/null | head -n1); \
+         if [ -n "$c" ]; then ln -sf "$(basename "$c")" /opt/clang/bin/clang; fi; \
+       fi \
+    && if [ ! -x /opt/clang/bin/clang++ ]; then \
+         cxx=$(ls /opt/clang/bin/clang++-[0-9]* 2>/dev/null | head -n1); \
+         if [ -n "$cxx" ]; then ln -sf "$(basename "$cxx")" /opt/clang/bin/clang++; fi; \
+       fi \
     && groupadd -g "${HPC_GID}" "${HPC_USER}" \
     && useradd -m -u "${HPC_UID}" -g "${HPC_GID}" -s /bin/bash "${HPC_USER}" \
     && mkdir -p /var/run/sshd \
