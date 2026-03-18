@@ -21,6 +21,8 @@ RUN yum -y install \
       environment-modules \
       openssh-server \
       openssh-clients \
+      perf \
+      binutils \
       papi \
       papi-devel \
       gnuplot \
